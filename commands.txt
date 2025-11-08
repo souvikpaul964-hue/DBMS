@@ -1,0 +1,3 @@
+.\.venv\Scripts\activate
+.\setup_database.bat
+python .\hotel_management.py
