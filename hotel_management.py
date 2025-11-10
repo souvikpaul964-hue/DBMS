@@ -364,6 +364,21 @@ class HotelManagementSystem:
         results = self.fetch_query(query, (hotel_id,))
         return results[0] if results else None
     
+    def search_hotels_by_location(self, location_search: str = None) -> List:
+        """Search hotels by location, city, or state. If no search term, return all."""
+        if location_search:
+            query = """
+                SELECT hotel_id, hotel_name, location, address, city, state, country,
+                       phone, email, rating, description
+                FROM hotels
+                WHERE location LIKE %s OR city LIKE %s OR state LIKE %s OR address LIKE %s
+                ORDER BY rating DESC, hotel_name
+            """
+            search_term = f"%{location_search}%"
+            return self.fetch_query(query, (search_term, search_term, search_term, search_term))
+        else:
+            return self.get_all_hotels()
+    
     def get_occupancy_report(self) -> List:
         query = """
             SELECT 
@@ -531,16 +546,17 @@ def print_menu():
     print("16. Add Guest Feedback")
     print("\nHOTEL LOCATIONS:")
     print("17. View All Hotels & Locations")
-    print("18. Search Rooms by Hotel")
+    print("18. Search Hotels by Location")
+    print("19. Search Rooms by Hotel")
     print("\nREPORTS & ANALYTICS:")
-    print("19. Occupancy Report")
-    print("20. Revenue Report")
-    print("21. Advanced Business Analytics")
-    print("22. Hotel Rating & Reviews")
+    print("20. Occupancy Report")
+    print("21. Revenue Report")
+    print("22. Advanced Business Analytics")
+    print("23. Hotel Rating & Reviews")
     print("\nDATA EXPORT:")
-    print("23. Export All Data to CSV")
-    print("24. Export Single Table to CSV")
-    print("25. Export Active Bookings Report")
+    print("24. Export All Data to CSV")
+    print("25. Export Single Table to CSV")
+    print("26. Export Active Bookings Report")
     print("\n0.  Exit")
     print("="*60)
 
@@ -867,6 +883,31 @@ def main():
                     print("No hotels found")
             
             elif choice == "18":
+                # Search Hotels by Location
+                location_search = input("\n🔍 Enter location to search (e.g., Station Area, Madhyamgram, Barasat): ").strip()
+                
+                if location_search:
+                    hotels = hotel.search_hotels_by_location(location_search)
+                    
+                    if hotels:
+                        print(f"\n{'='*80}")
+                        print(f"🏨 HOTELS MATCHING '{location_search}'")
+                        print(f"{'='*80}")
+                        for h in hotels:
+                            print(f"\n📍 {h['hotel_name']}")
+                            print(f"   Location: {h['location']}, {h['city']}, {h['state']}, {h['country']}")
+                            print(f"   Address: {h['address']}")
+                            print(f"   Phone: {h['phone']} | Email: {h['email']}")
+                            print(f"   Rating: {h['rating']}/5.0 {render_stars(h['rating'])}")
+                            if h['description']:
+                                print(f"   About: {h['description']}")
+                        print(f"\n✅ Found {len(hotels)} hotel(s)")
+                    else:
+                        print(f"❌ No hotels found matching '{location_search}'")
+                else:
+                    print("Search cancelled - no location entered")
+            
+            elif choice == "19":
                 # Search Rooms by Hotel
                 try:
                     hotels = hotel.get_all_hotels()
@@ -892,7 +933,7 @@ def main():
                 except Exception as e:
                     print(f"Error: {e}")
             
-            elif choice == "19":
+            elif choice == "20":
                 # Occupancy Report
                 report = hotel.get_occupancy_report()
                 
@@ -906,7 +947,7 @@ def main():
                         print(f"  In Maintenance: {row['in_maintenance']}")
                         print(f"  Occupancy Rate: {row['occupancy_rate']}%")
             
-            elif choice == "20":
+            elif choice == "21":
                 # Revenue Report
                 report = hotel.get_revenue_report()
                 
@@ -916,7 +957,7 @@ def main():
                     print(f"Total Revenue: ₹{float(report['total_revenue'] or 0):.2f}")
                     print(f"Average Transaction: ₹{float(report['avg_transaction'] or 0):.2f}")
             
-            elif choice == "21":
+            elif choice == "22":
                 # Advanced Analytics
                 analytics = hotel.advanced.get_advanced_analytics()
                 
@@ -939,7 +980,7 @@ def main():
                 print(f"   Returning Guests: {analytics['returning_guests']}/{analytics['total_guests']}")
                 print(f"{'='*70}")
             
-            elif choice == "22":
+            elif choice == "23":
                 # Hotel Rating
                 rating_data = hotel.advanced.get_average_rating()
                 
@@ -951,14 +992,14 @@ def main():
                 print(f"Total Reviews: {rating_data['total_reviews']}")
                 print(f"{'='*50}")
             
-            elif choice == "23":
+            elif choice == "24":
                 # Export All Data
                 print("\n--- Export All Data to CSV ---")
                 confirm = input("This will export all tables to CSV files. Continue? (y/n): ")
                 if confirm.lower() == 'y':
                     hotel.export_all_data()
             
-            elif choice == "24":
+            elif choice == "25":
                 # Export Single Table
                 print("\n--- Export Single Table ---")
                 print("Available tables:")
@@ -980,7 +1021,7 @@ def main():
                 except ValueError:
                     print("Please enter a valid number.")
             
-            elif choice == "25":
+            elif choice == "26":
                 # Export Active Bookings Report
                 print("\n--- Export Active Bookings Report ---")
                 query = """

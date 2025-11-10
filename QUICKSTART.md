@@ -50,9 +50,11 @@ python hotel_management.py
 
 After setup, try:
 1. Option 2: Search Guest (search "Arjun")
-2. Option 7: View Current Check-ins
-3. Option 11: Guest Loyalty Status (Guest ID: 1)
-4. Option 19: Advanced Analytics
+2. Option 17: View All Hotels & Locations (see all 3 hotels in Barasat)
+3. Option 18: Search Hotels by Location (search "Station", "Madhyamgram", or "Barasat")
+4. Option 19: Search Rooms by Hotel (filter rooms by specific hotel)
+5. Option 11: Guest Loyalty Status (Guest ID: 1)
+6. Option 22: Advanced Analytics
 
 ---
 
