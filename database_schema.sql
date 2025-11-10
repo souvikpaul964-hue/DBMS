@@ -1,5 +1,6 @@
 -- Hotel Management System Database Schema
 -- Created: 2024
+-- Updated: 2025 - Multi-hotel support added
 
 -- Drop existing tables if they exist (in reverse order of dependencies)
 DROP TABLE IF EXISTS feedback;
@@ -10,6 +11,23 @@ DROP TABLE IF EXISTS rooms;
 DROP TABLE IF EXISTS room_types;
 DROP TABLE IF EXISTS staff;
 DROP TABLE IF EXISTS departments;
+DROP TABLE IF EXISTS hotels;
+
+-- Create Hotels Table (NEW)
+CREATE TABLE hotels (
+    hotel_id INT PRIMARY KEY AUTO_INCREMENT,
+    hotel_name VARCHAR(100) NOT NULL,
+    location VARCHAR(100) NOT NULL,
+    address TEXT NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    state VARCHAR(50),
+    country VARCHAR(50) NOT NULL,
+    phone VARCHAR(15),
+    email VARCHAR(100),
+    rating DECIMAL(2,1) DEFAULT 4.0,
+    description TEXT,
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Create Departments Table
 CREATE TABLE departments (
@@ -25,11 +43,13 @@ CREATE TABLE staff (
     last_name VARCHAR(50) NOT NULL,
     email VARCHAR(100) UNIQUE,
     phone VARCHAR(15),
+    hotel_id INT NOT NULL,
     department_id INT,
     position VARCHAR(50),
     salary DECIMAL(10, 2),
     hire_date DATE,
     status ENUM('active', 'inactive') DEFAULT 'active',
+    FOREIGN KEY (hotel_id) REFERENCES hotels(hotel_id),
     FOREIGN KEY (department_id) REFERENCES departments(department_id)
 );
 
@@ -45,12 +65,15 @@ CREATE TABLE room_types (
 -- Create Rooms Table
 CREATE TABLE rooms (
     room_id INT PRIMARY KEY AUTO_INCREMENT,
-    room_number VARCHAR(10) NOT NULL UNIQUE,
+    hotel_id INT NOT NULL,
+    room_number VARCHAR(10) NOT NULL,
     type_id INT NOT NULL,
     floor INT,
     status ENUM('available', 'occupied', 'maintenance', 'reserved') DEFAULT 'available',
     last_cleaned DATETIME,
-    FOREIGN KEY (type_id) REFERENCES room_types(type_id)
+    FOREIGN KEY (hotel_id) REFERENCES hotels(hotel_id),
+    FOREIGN KEY (type_id) REFERENCES room_types(type_id),
+    UNIQUE KEY unique_room_per_hotel (hotel_id, room_number)
 );
 
 -- Create Guests Table

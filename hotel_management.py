@@ -111,12 +111,13 @@ class HotelManagementSystem:
         results = self.fetch_query(query, (guest_id,))
         return results[0] if results else None
     
-    def get_available_rooms(self, check_in: date, check_out: date, room_type: str = None) -> List:
+    def get_available_rooms(self, check_in: date, check_out: date, room_type: str = None, hotel_id: int = None) -> List:
         query = """
             SELECT r.room_id, r.room_number, rt.type_name, rt.base_price, 
-                   rt.capacity, r.floor
+                   rt.capacity, r.floor, h.hotel_name, h.location, h.city
             FROM rooms r
             JOIN room_types rt ON r.type_id = rt.type_id
+            JOIN hotels h ON r.hotel_id = h.hotel_id
             WHERE r.status = 'available'
             AND r.room_id NOT IN (
                 SELECT room_id FROM bookings
@@ -125,13 +126,17 @@ class HotelManagementSystem:
             )
         """
         
+        params = [check_out, check_in]
+        
+        if hotel_id:
+            query += " AND r.hotel_id = %s"
+            params.append(hotel_id)
+        
         if room_type:
             query += " AND rt.type_name = %s"
-            params = (check_out, check_in, room_type)
-        else:
-            params = (check_out, check_in)
+            params.append(room_type)
         
-        return self.fetch_query(query, params)
+        return self.fetch_query(query, tuple(params))
     
     def get_all_rooms(self) -> List:
         query = """
@@ -343,6 +348,22 @@ class HotelManagementSystem:
         """
         return self.fetch_query(query, (booking_id,))
     
+    def get_all_hotels(self) -> List:
+        """Get list of all hotels with location information."""
+        query = """
+            SELECT hotel_id, hotel_name, location, address, city, state, country,
+                   phone, email, rating, description
+            FROM hotels
+            ORDER BY hotel_name
+        """
+        return self.fetch_query(query)
+    
+    def get_hotel_by_id(self, hotel_id: int) -> Optional[Dict]:
+        """Get details of a specific hotel."""
+        query = "SELECT * FROM hotels WHERE hotel_id = %s"
+        results = self.fetch_query(query, (hotel_id,))
+        return results[0] if results else None
+    
     def get_occupancy_report(self) -> List:
         query = """
             SELECT 
@@ -424,7 +445,7 @@ class HotelManagementSystem:
 
     def export_all_data(self) -> bool:
         """Export all tables to CSV files in exports folder."""
-        tables = ['departments', 'staff', 'room_types', 'rooms',
+        tables = ['hotels', 'departments', 'staff', 'room_types', 'rooms',
                   'guests', 'bookings', 'payments', 'feedback']
         print("\n" + "="*60)
         print("   EXPORTING ALL DATA TO CSV")
@@ -508,15 +529,18 @@ def print_menu():
     print("14. Checkout Reminders for Today")
     print("15. Housekeeping Schedule")
     print("16. Add Guest Feedback")
+    print("\nHOTEL LOCATIONS:")
+    print("17. View All Hotels & Locations")
+    print("18. Search Rooms by Hotel")
     print("\nREPORTS & ANALYTICS:")
-    print("17. Occupancy Report")
-    print("18. Revenue Report")
-    print("19. Advanced Business Analytics")
-    print("20. Hotel Rating & Reviews")
+    print("19. Occupancy Report")
+    print("20. Revenue Report")
+    print("21. Advanced Business Analytics")
+    print("22. Hotel Rating & Reviews")
     print("\nDATA EXPORT:")
-    print("21. Export All Data to CSV")
-    print("22. Export Single Table to CSV")
-    print("23. Export Active Bookings Report")
+    print("23. Export All Data to CSV")
+    print("24. Export Single Table to CSV")
+    print("25. Export Active Bookings Report")
     print("\n0.  Exit")
     print("="*60)
 
@@ -574,12 +598,23 @@ def main():
                     check_in = input("Check-in date (YYYY-MM-DD): ")
                     check_out = input("Check-out date (YYYY-MM-DD): ")
                     
-                    rooms = hotel.get_available_rooms(check_in, check_out)
+                    # Ask if user wants to filter by hotel
+                    filter_hotel = input("Filter by hotel? (y/n): ").lower()
+                    hotel_id = None
+                    if filter_hotel == 'y':
+                        hotels = hotel.get_all_hotels()
+                        print("\nAvailable Hotels:")
+                        for h in hotels:
+                            print(f"{h['hotel_id']}. {h['hotel_name']} - {h['location']}, {h['city']}")
+                        hotel_id = int(input("Enter Hotel ID: "))
+                    
+                    rooms = hotel.get_available_rooms(check_in, check_out, hotel_id=hotel_id)
                     
                     if rooms:
                         print(f"\n{len(rooms)} room(s) available:")
                         for room in rooms:
-                            print(f"\nRoom ID: {room['room_id']} | Room Number: {room['room_number']} - {room['type_name']}")
+                            print(f"\n🏨 Hotel: {room['hotel_name']} ({room['location']}, {room['city']})")
+                            print(f"Room ID: {room['room_id']} | Room Number: {room['room_number']} - {room['type_name']}")
                             print(f"Price: ₹{room['base_price']}/night")
                             print(f"Capacity: {room['capacity']} persons | Floor: {room['floor']}")
                     else:
@@ -813,6 +848,51 @@ def main():
                     print("Error: Please enter valid numbers")
             
             elif choice == "17":
+                # View All Hotels & Locations
+                hotels = hotel.get_all_hotels()
+                
+                if hotels:
+                    print("\n" + "="*80)
+                    print("🏨 ALL HOTEL LOCATIONS")
+                    print("="*80)
+                    for h in hotels:
+                        print(f"\n📍 {h['hotel_name']}")
+                        print(f"   Location: {h['location']}, {h['city']}, {h['state']}, {h['country']}")
+                        print(f"   Address: {h['address']}")
+                        print(f"   Phone: {h['phone']} | Email: {h['email']}")
+                        print(f"   Rating: {h['rating']}/5.0 {render_stars(h['rating'])}")
+                        if h['description']:
+                            print(f"   About: {h['description']}")
+                else:
+                    print("No hotels found")
+            
+            elif choice == "18":
+                # Search Rooms by Hotel
+                try:
+                    hotels = hotel.get_all_hotels()
+                    print("\n--- Select Hotel ---")
+                    for h in hotels:
+                        print(f"{h['hotel_id']}. {h['hotel_name']} - {h['location']}, {h['city']}")
+                    
+                    hotel_id = int(input("\nEnter Hotel ID: "))
+                    check_in = input("Check-in date (YYYY-MM-DD): ")
+                    check_out = input("Check-out date (YYYY-MM-DD): ")
+                    
+                    rooms = hotel.get_available_rooms(check_in, check_out, hotel_id=hotel_id)
+                    
+                    if rooms:
+                        print(f"\n✅ {len(rooms)} room(s) available at {rooms[0]['hotel_name']}:")
+                        for room in rooms:
+                            print(f"\n   Room {room['room_number']} - {room['type_name']}")
+                            print(f"   Price: ₹{room['base_price']}/night | Floor: {room['floor']} | Capacity: {room['capacity']}")
+                    else:
+                        print("No rooms available for selected dates at this hotel")
+                except ValueError:
+                    print("Error: Please enter valid hotel ID")
+                except Exception as e:
+                    print(f"Error: {e}")
+            
+            elif choice == "19":
                 # Occupancy Report
                 report = hotel.get_occupancy_report()
                 
@@ -826,7 +906,7 @@ def main():
                         print(f"  In Maintenance: {row['in_maintenance']}")
                         print(f"  Occupancy Rate: {row['occupancy_rate']}%")
             
-            elif choice == "18":
+            elif choice == "20":
                 # Revenue Report
                 report = hotel.get_revenue_report()
                 
@@ -836,7 +916,7 @@ def main():
                     print(f"Total Revenue: ₹{float(report['total_revenue'] or 0):.2f}")
                     print(f"Average Transaction: ₹{float(report['avg_transaction'] or 0):.2f}")
             
-            elif choice == "19":
+            elif choice == "21":
                 # Advanced Analytics
                 analytics = hotel.advanced.get_advanced_analytics()
                 
@@ -859,7 +939,7 @@ def main():
                 print(f"   Returning Guests: {analytics['returning_guests']}/{analytics['total_guests']}")
                 print(f"{'='*70}")
             
-            elif choice == "20":
+            elif choice == "22":
                 # Hotel Rating
                 rating_data = hotel.advanced.get_average_rating()
                 
@@ -871,22 +951,23 @@ def main():
                 print(f"Total Reviews: {rating_data['total_reviews']}")
                 print(f"{'='*50}")
             
-            elif choice == "21":
+            elif choice == "23":
                 # Export All Data
                 print("\n--- Export All Data to CSV ---")
                 confirm = input("This will export all tables to CSV files. Continue? (y/n): ")
                 if confirm.lower() == 'y':
                     hotel.export_all_data()
             
-            elif choice == "22":
+            elif choice == "24":
                 # Export Single Table
                 print("\n--- Export Single Table ---")
                 print("Available tables:")
-                print("1. departments   2. staff       3. room_types  4. rooms")
-                print("5. guests        6. bookings    7. payments    8. feedback")
+                print("1. hotels        2. departments  3. staff        4. room_types")
+                print("5. rooms         6. guests       7. bookings     8. payments")
+                print("9. feedback")
                 
                 table_choice = input("\nEnter table number: ")
-                tables = ['departments', 'staff', 'room_types', 'rooms', 
+                tables = ['hotels', 'departments', 'staff', 'room_types', 'rooms',
                          'guests', 'bookings', 'payments', 'feedback']
                 
                 try:
@@ -899,7 +980,7 @@ def main():
                 except ValueError:
                     print("Please enter a valid number.")
             
-            elif choice == "23":
+            elif choice == "25":
                 # Export Active Bookings Report
                 print("\n--- Export Active Bookings Report ---")
                 query = """

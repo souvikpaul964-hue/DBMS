@@ -6,12 +6,29 @@ This diagram can be rendered in GitHub, VS Code with Mermaid extension, or onlin
 
 ```mermaid
 erDiagram
-    DEPARTMENTS ||--o{ STAFF : "employs"
+    HOTELS ||--o{ ROOMS : "has"
+    HOTELS ||--o{ STAFF : "employs_at"
+    DEPARTMENTS ||--o{ STAFF : "manages"
     ROOM_TYPES ||--o{ ROOMS : "categorizes"
     GUESTS ||--o{ BOOKINGS : "makes"
     ROOMS ||--o{ BOOKINGS : "booked_in"
     BOOKINGS ||--o{ PAYMENTS : "paid_by"
     BOOKINGS ||--o{ FEEDBACK : "reviewed_by"
+
+    HOTELS {
+        int hotel_id PK
+        varchar hotel_name
+        varchar location "Beachfront/Downtown/Hill Station"
+        text address
+        varchar city
+        varchar state
+        varchar country
+        varchar phone
+        varchar email
+        decimal rating "Hotel rating (2,1)"
+        text description
+        datetime created_date
+    }
 
     DEPARTMENTS {
         int department_id PK
@@ -25,6 +42,7 @@ erDiagram
         varchar last_name
         varchar email UK "UNIQUE"
         varchar phone
+        int hotel_id FK
         int department_id FK
         varchar position
         decimal salary
@@ -42,7 +60,8 @@ erDiagram
 
     ROOMS {
         int room_id PK
-        varchar room_number UK "UNIQUE"
+        int hotel_id FK
+        varchar room_number "UK per hotel"
         int type_id FK
         int floor
         enum status "available/occupied/maintenance/reserved"
@@ -122,7 +141,9 @@ mmdc -i ER_DIAGRAM_MERMAID.md -o ER_DIAGRAM.png
 
 | Relationship | Parent → Child | Type | Description |
 |--------------|----------------|------|-------------|
-| employs | DEPARTMENTS → STAFF | 1:N | Each department has multiple staff |
+| has | HOTELS → ROOMS | 1:N | Each hotel has multiple rooms |
+| employs_at | HOTELS → STAFF | 1:N | Each hotel employs multiple staff |
+| manages | DEPARTMENTS → STAFF | 1:N | Each department has multiple staff |
 | categorizes | ROOM_TYPES → ROOMS | 1:N | Each room type has multiple rooms |
 | makes | GUESTS → BOOKINGS | 1:N | Each guest can make multiple bookings |
 | booked_in | ROOMS → BOOKINGS | 1:N | Each room can have multiple bookings |
@@ -130,9 +151,11 @@ mmdc -i ER_DIAGRAM_MERMAID.md -o ER_DIAGRAM.png
 | reviewed_by | BOOKINGS → FEEDBACK | 1:N | Each booking can have multiple feedback entries |
 
 ## Key Features
-- ✅ All 8 entities with complete attributes
+- ✅ Multi-hotel support with 3 hotels across India
+- ✅ All 9 entities with complete attributes
 - ✅ Primary keys (PK) and Foreign keys (FK) marked
 - ✅ Unique constraints (UK) indicated
 - ✅ ENUM types documented with values
 - ✅ DECIMAL(2,1) rating for half-star support (3.5, 4.5, etc.)
 - ✅ All relationships with cardinality (1:N)
+- ✅ Location tracking for hotels (city, state, country)
